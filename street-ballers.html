@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Street Ballers | 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: sans-serif; background: #111; color: white; text-align: center; padding: 20px; }
+    .box { max-width: 400px; margin: auto; background: #222; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #333; color: white; }
+    button { width: 95%; padding: 12px; background: #00ff88; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    .card { background: #333; padding: 15px; margin: 10px 0; border-radius: 10px; text-align: left; border-left: 4px solid #00ff88; }
+    #status { margin-top: 20px; font-size: 12px; color: #888; }
+  </style>
+</head>
+<body>
+
+  <div class="box">
+    <h1>⚽ Street Ballers</h1>
+
+    <div id="authSection">
+      <input id="email" type="email" placeholder="Email">
+      <input id="password" type="password" placeholder="Password (6+ chars)">
+      <button onclick="signup()">CREATE ACCOUNT</button>
+      <button onclick="login()" style="background:#444; color:white;">LOGIN</button>
+    </div>
+
+    <div id="appSection" style="display:none;">
+      <p id="userEmail"></p>
+      <hr>
+      <h3>Post a Game</h3>
+      <input id="location" placeholder="Court Location">
+      <input id="time" placeholder="Time (e.g. 6PM Today)">
+      <button onclick="submitGame()">POST GAME</button>
+      
+      <h3 style="margin-top:30px;">Available Games</h3>
+      <div id="gamesList"></div>
+      <button onclick="logout()" style="background:#ff4444; color:white; margin-top:20px;">LOGOUT</button>
+    </div>
+
+    <div id="status">System Status: Checking...</div>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, addDoc, collection, onSnapshot, query, orderBy } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // PLUGGED IN YOUR KEY HERE
+  const firebaseConfig = {
+    apiKey: "AIzaSyAljbMUMQNTqmSnQ92iC6Zg_PxKy2ahhF8",
+    authDomain: "street-ballers-d0017.firebaseapp.com",
+    projectId: "street-ballers-d0017",
+    storageBucket: "street-ballers-d0017.firebasestorage.app",
+    messagingSenderId: "1033166856819",
+    appId: "1:1033166856819:web:ed08c8a4b5e922499d0006"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const status = document.getElementById("status");
+
+  // Check connection
+  if (app) { status.innerText = "✅ Connected to Firebase"; }
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById("authSection").style.display = "none";
+      document.getElementById("appSection").style.display = "block";
+      document.getElementById("userEmail").innerText = "Logged in as: " + user.email;
+      loadGames();
+    } else {
+      document.getElementById("authSection").style.display = "block";
+      document.getElementById("appSection").style.display = "none";
+    }
+  });
+
+  window.signup = async () => {
+    try {
+      await createUserWithEmailAndPassword(auth, email.value, password.value);
+    } catch (e) { alert(e.message); }
+  };
+
+  window.login = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, email.value, password.value);
+    } catch (e) { alert("Login Error: " + e.message); }
+  };
+
+  window.logout = () => signOut(auth);
+
+  window.submitGame = async () => {
+    try {
+      await addDoc(collection(db, "games"), {
+        location: document.getElementById("location").value,
+        time: document.getElementById("time").value,
+        user: auth.currentUser.email,
+        timestamp: Date.now()
+      });
+      document.getElementById("location").value = "";
+      document.getElementById("time").value = "";
+    } catch (e) { alert("Post Error: " + e.message); }
+  };
+
+  function loadGames() {
+    const q = query(collection(db, "games"), orderBy("timestamp", "desc"));
+    onSnapshot(q, (snap) => {
+      gamesList.innerHTML = "";
+      snap.forEach(doc => {
+        const g = doc.data();
+        gamesList.innerHTML += `<div class="card"><strong>${g.location}</strong><br><small>${g.time}</small></div>`;
+      });
+    });
+  }
+</script>
+</body>
+</html>
